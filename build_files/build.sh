@@ -5,23 +5,51 @@ set -ouex pipefail
 # Copy the contents of system_files/ of the git repo to /
 cp -avf "/ctx/system_files"/. /
 
-### Install packages
-
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
-
-# this installs a package from fedora repos
-dnf5 install -y tmux
-
-# Use a COPR Example:
+### COSMIC desktop environment (nightly channel -- includes Frosted Glass)
 #
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
+# ryanabx/cosmic-epoch is the Fedora COPR that tracks COSMIC's upstream git
+# nightly builds. This is the channel that already has the Frosted Glass
+# blur effect: cosmic-settings' toggle UI was reapplied at commit fff1485 on
+# 2026-07-10 (after an earlier revert) and that exact commit is what this
+# COPR built on 2026-07-11; cosmic-comp's blur renderer was snapshotted in
+# again on 2026-07-13. Fedora's own official repos only carry the older
+# tagged/stable release (`dnf install @cosmic-desktop-environment`), which
+# does not have Frosted Glass yet.
+dnf5 -y copr enable ryanabx/cosmic-epoch
 
-#### Example for enabling a System Unit File
+dnf5 install -y \
+    cosmic-desktop \
+    cosmic-session \
+    cosmic-comp \
+    cosmic-settings \
+    cosmic-settings-daemon \
+    cosmic-panel \
+    cosmic-app-library \
+    cosmic-applets \
+    cosmic-launcher \
+    cosmic-files \
+    cosmic-store \
+    cosmic-bg \
+    cosmic-notifications \
+    cosmic-osd \
+    cosmic-randr \
+    cosmic-screenshot \
+    cosmic-workspaces \
+    cosmic-idle \
+    cosmic-icon-theme \
+    cosmic-wallpapers \
+    cosmic-edit \
+    cosmic-term \
+    xdg-desktop-portal-cosmic \
+    pop-launcher
 
-systemctl enable podman.socket
+# Deliberately NOT installing/enabling cosmic-greeter here. GDM is already
+# this image's active display manager and lists every .desktop file it finds
+# under /usr/share/wayland-sessions/ as a selectable session -- the
+# cosmic-session package above drops its own cosmic.desktop there, so it
+# shows up next to GNOME's existing entry with no greeter swap required.
+
+# Disable the COPR so it doesn't linger on the built image -- it's only
+# needed during this build. Leaving it enabled would let it influence any
+# future ad-hoc `rpm-ostree install` run locally on a booted system.
+dnf5 -y copr disable ryanabx/cosmic-epoch
